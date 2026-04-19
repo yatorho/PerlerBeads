@@ -1,0 +1,6 @@
+name: perler-beads
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pillow>=10

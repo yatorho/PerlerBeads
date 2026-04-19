@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile script
+        run: python -m py_compile perler_pattern.py
+
+      - name: Generate sample pattern
+        run: |
+          python - <<'PY'
+          from PIL import Image, ImageDraw
+
+          image = Image.new("RGBA", (64, 64), (255, 255, 255, 0))
+          draw = ImageDraw.Draw(image)
+          draw.rectangle((8, 8, 55, 55), fill=(230, 30, 60, 255))
+          draw.ellipse((20, 20, 44, 44), fill=(255, 230, 80, 255))
+          image.save("sample.png")
+          PY
+          python perler_pattern.py sample.png --size 16x16 --cell-size 16 --output-dir output_ci
+
+      - name: Verify generated files
+        run: |
+          test -s output_ci/sample_pattern.png
+          test -s output_ci/sample_preview.png
+          test -s output_ci/sample_matrix.csv
+          test -s output_ci/sample_materials.csv
+          test -s output_ci/sample_materials.json

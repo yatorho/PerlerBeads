@@ -25,7 +25,7 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 |-- perler_pattern.py              # CLI tool
 |-- assets/                        # README images
 |-- examples/kitty.png             # Example input image
-|-- palettes/starter_perler.csv    # Starter palette
+|-- palettes/                      # Built-in palettes
 |-- environment.yml                # Conda environment
 |-- requirements.txt               # pip dependency list
 |-- .github/workflows/ci.yml       # GitHub Actions smoke test
@@ -98,6 +98,12 @@ Use only the first 12 colors from the palette:
 python perler_pattern.py input.png --size 80x60 --max-colors 12
 ```
 
+Use a different built-in palette:
+
+```bash
+python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.csv
+```
+
 ## Key Options
 
 - `--size 80x60`: create an 80-column by 60-row bead grid.
@@ -130,6 +136,15 @@ pattern height ~= max(grid rows * cell-size, legend height) + title area + margi
 For example, `--size 40x46 --cell-size 24` produces a higher-resolution image than `--size 40x46 --cell-size 16`, while keeping the same bead count. Use `--no-legend` to reduce the extra width added by the legend.
 
 ## Custom Palette
+
+Built-in palettes:
+
+- `palettes/starter_perler.csv`: broad starter palette for general use.
+- `palettes/classic_bright.csv`: saturated high-contrast colors.
+- `palettes/soft_pastel.csv`: lighter pastel colors for gentle illustrations.
+- `palettes/pixel_art_16.csv`: compact 16-color palette for retro pixel-art patterns.
+- `palettes/grayscale.csv`: black-to-white grayscale palette.
+- `palettes/skin_hair_natural.csv`: skin, hair, and natural tones for portraits and characters.
 
 CSV with HEX colors:
 
@@ -165,5 +180,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Notes
 
-- The included starter palette is not an official complete color chart from any manufacturer.
+- The included palettes are practical starter palettes, not official complete color charts from any manufacturer.
 - `examples/kitty.png` is included as an example input image for quick CLI testing.

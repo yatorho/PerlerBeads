@@ -1,0 +1,24 @@
+code,name,hex
+W,White,#FFFFFF
+BK,Black,#111111
+GY,Gray,#8A8F93
+LG,Light Gray,#CED3D6
+R,Red,#D62828
+DR,Dark Red,#8F1D2C
+O,Orange,#F77F00
+Y,Yellow,#FCE205
+LY,Light Yellow,#FFF08A
+G,Green,#2A9D4B
+DG,Dark Green,#12613A
+L,Kiwi Lime,#8CC63F
+B,Blue,#1D70B8
+DB,Dark Blue,#173A70
+LB,Light Blue,#7EC8E3
+TQ,Turquoise,#20A7A0
+P,Purple,#6A3D9A
+LV,Lavender,#B39DDB
+PK,Pink,#F48FB1
+MG,Magenta,#D81B60
+TN,Tan,#C69C6D
+BR,Brown,#7B4A2E
+DBR,Dark Brown,#3B251B

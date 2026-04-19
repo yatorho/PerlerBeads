@@ -1,0 +1,17 @@
+code,name,hex
+0,Black,#000000
+1,White,#FFFFFF
+2,Dark Gray,#555555
+3,Light Gray,#AAAAAA
+4,Red,#FF004D
+5,Orange,#FFA300
+6,Yellow,#FFEC27
+7,Green,#00E436
+8,Dark Green,#008751
+9,Cyan,#29ADFF
+A,Blue,#1D2B53
+B,Purple,#7E2553
+C,Pink,#FF77A8
+D,Brown,#AB5236
+E,Tan,#C2C3C7
+F,Peach,#FFCCAA

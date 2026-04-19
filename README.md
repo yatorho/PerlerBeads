@@ -2,6 +2,12 @@
 
 Generate numbered Perler Beads pattern sheets from reference images. The tool resizes an input image to a bead grid, maps pixels to a user-controlled color palette, and writes a pattern sheet, preview image, grid matrix, and material list.
 
+## Preview
+
+| Pattern sheet | Bead preview |
+| --- | --- |
+| ![Numbered pattern sheet](assets/example-pattern-sheet.png) | ![Bead preview](assets/example-preview.png) |
+
 ## Features
 
 - Supports PNG, JPG, WEBP, and other image formats readable by Pillow.
@@ -17,6 +23,7 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 ```text
 .
 |-- perler_pattern.py              # CLI tool
+|-- assets/                        # README images
 |-- examples/kitty.png             # Example input image
 |-- palettes/starter_perler.csv    # Starter palette
 |-- environment.yml                # Conda environment

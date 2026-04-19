@@ -17,7 +17,7 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 ```text
 .
 |-- perler_pattern.py              # CLI tool
-|-- kitty.png                      # Example input image
+|-- examples/kitty.png             # Example input image
 |-- palettes/starter_perler.csv    # Starter palette
 |-- environment.yml                # Conda environment
 |-- requirements.txt               # pip dependency list
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ## Quick Start
 
 ```bash
-python perler_pattern.py kitty.png --size 50x60 --cell-size 28 --output-dir output
+python perler_pattern.py examples/kitty.png --size 50x60 --cell-size 28 --output-dir output
 ```
 
 Generated outputs:
@@ -160,4 +160,4 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 ## Notes
 
 - The included starter palette is not an official complete color chart from any manufacturer.
-- `kitty.png` is included as an example input image for quick CLI testing.
+- `examples/kitty.png` is included as an example input image for quick CLI testing.

@@ -279,6 +279,13 @@ def draw_bead(
         draw.ellipse(bead_box, fill=color, outline=outline)
 
 
+def coordinate_label_values(count: int, interval: int) -> set[int]:
+    labels = {1, count}
+    if interval > 0:
+        labels.update(range(interval, count + 1, interval))
+    return labels
+
+
 def render_pattern(
     matrix: list[list[str]],
     used: dict[str, PaletteColor],
@@ -289,6 +296,8 @@ def render_pattern(
     show_legend: bool,
     title: str,
     bead_shape: str,
+    major_grid: int,
+    super_grid: int,
 ) -> None:
     rows = len(matrix)
     cols = len(matrix[0])
@@ -301,25 +310,43 @@ def render_pattern(
     title_font = load_font(max(16, int(cell_size * 0.55)), bold=True)
     legend_font = load_font(14)
     legend_bold = load_font(14, bold=True)
+    coord_font = load_font(max(9, min(16, int(cell_size * 0.5))), bold=True)
 
     scratch = Image.new("RGB", (1, 1), "white")
     scratch_draw = ImageDraw.Draw(scratch)
     title_height = text_size(scratch_draw, title, title_font)[1]
     title_area = title_height + max(14, cell_size // 2)
-    grid_top = margin + title_area
-    grid_left = margin
     grid_width = cols * cell_size
     grid_height = rows * cell_size
+    coord_sample = str(max(rows, cols))
+    coord_text_width, coord_text_height = text_size(scratch_draw, coord_sample, coord_font)
+    coord_band = max(24, coord_text_width + 12, coord_text_height + 12)
+    frame_left = margin
+    frame_top = margin + title_area
+    grid_left = frame_left + coord_band
+    grid_top = frame_top + coord_band
+    frame_width = grid_width + (coord_band * 2)
+    frame_height = grid_height + (coord_band * 2)
     legend_header_height = 28 if show_legend else 0
     legend_row_height = 24
     legend_height = legend_header_height + (len(counts) * legend_row_height)
-    image_width = grid_width + (margin * 2) + legend_width
-    image_height = max(grid_height, legend_height) + (margin * 2) + title_area
+    image_width = frame_width + (margin * 2) + legend_width
+    image_height = max(frame_height, legend_height) + (margin * 2) + title_area
     output = Image.new("RGB", (image_width, image_height), "white")
     draw = ImageDraw.Draw(output)
     grid_color = (210, 210, 210)
+    major_grid_color = (130, 130, 130)
+    super_grid_color = (55, 55, 55)
+    frame_fill = (244, 246, 248)
+    frame_outline = (65, 65, 65)
 
     draw.text((margin, margin // 2), title, fill=(20, 20, 20), font=title_font)
+    draw.rectangle(
+        (frame_left, frame_top, frame_left + frame_width, frame_top + frame_height),
+        fill=frame_fill,
+        outline=frame_outline,
+        width=2,
+    )
 
     for y, row in enumerate(matrix):
         for x, code in enumerate(row):
@@ -347,13 +374,77 @@ def render_pattern(
     if show_grid:
         for x in range(cols + 1):
             px = grid_left + x * cell_size
-            draw.line((px, grid_top, px, grid_top + grid_height), fill=grid_color)
+            if super_grid > 0 and x % super_grid == 0:
+                line_color = super_grid_color
+                line_width = 3
+            elif major_grid > 0 and x % major_grid == 0:
+                line_color = major_grid_color
+                line_width = 2
+            else:
+                line_color = grid_color
+                line_width = 1
+            draw.line((px, grid_top, px, grid_top + grid_height), fill=line_color, width=line_width)
         for y in range(rows + 1):
             py = grid_top + y * cell_size
-            draw.line((grid_left, py, grid_left + grid_width, py), fill=grid_color)
+            if super_grid > 0 and y % super_grid == 0:
+                line_color = super_grid_color
+                line_width = 3
+            elif major_grid > 0 and y % major_grid == 0:
+                line_color = major_grid_color
+                line_width = 2
+            else:
+                line_color = grid_color
+                line_width = 1
+            draw.line((grid_left, py, grid_left + grid_width, py), fill=line_color, width=line_width)
+
+    col_labels = coordinate_label_values(cols, major_grid)
+    row_labels = coordinate_label_values(rows, major_grid)
+    for col in sorted(col_labels):
+        center_x = grid_left + ((col - 1) * cell_size) + (cell_size // 2)
+        draw_centered_text(
+            draw,
+            (center_x - (cell_size // 2), frame_top, center_x + (cell_size // 2), grid_top),
+            str(col),
+            coord_font,
+            (35, 35, 35),
+        )
+        draw_centered_text(
+            draw,
+            (
+                center_x - (cell_size // 2),
+                grid_top + grid_height,
+                center_x + (cell_size // 2),
+                frame_top + frame_height,
+            ),
+            str(col),
+            coord_font,
+            (35, 35, 35),
+        )
+    for row in sorted(row_labels):
+        center_y = grid_top + ((row - 1) * cell_size) + (cell_size // 2)
+        draw_centered_text(
+            draw,
+            (frame_left, center_y - (cell_size // 2), grid_left, center_y + (cell_size // 2)),
+            str(row),
+            coord_font,
+            (35, 35, 35),
+        )
+        draw_centered_text(
+            draw,
+            (
+                grid_left + grid_width,
+                center_y - (cell_size // 2),
+                frame_left + frame_width,
+                center_y + (cell_size // 2),
+            ),
+            str(row),
+            coord_font,
+            (35, 35, 35),
+        )
+    draw.rectangle((grid_left, grid_top, grid_left + grid_width, grid_top + grid_height), outline=frame_outline, width=3)
 
     if show_legend:
-        legend_left = grid_left + grid_width + margin
+        legend_left = frame_left + frame_width + margin
         y = grid_top
         draw.text((legend_left, y), "Legend / Materials", fill=(20, 20, 20), font=legend_bold)
         y += 28
@@ -472,6 +563,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--max-colors", type=int, default=None, help="Use only the first N palette colors")
     parser.add_argument("--cell-size", type=int, default=28, help="Pattern cell size in pixels")
+    parser.add_argument("--major-grid", type=int, default=5, help="Draw heavier grid lines and coordinate labels every N cells")
+    parser.add_argument("--super-grid", type=int, default=10, help="Draw the heaviest grid lines every N cells")
     parser.add_argument(
         "--bead-shape",
         choices=BEAD_SHAPES,
@@ -519,6 +612,10 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if args.cell_size < 12:
         parser.error("--cell-size must be at least 12 so color codes remain readable")
+    if args.major_grid < 0:
+        parser.error("--major-grid must be zero or greater")
+    if args.super_grid < 0:
+        parser.error("--super-grid must be zero or greater")
     if not 0 <= args.transparent_alpha <= 255:
         parser.error("--transparent-alpha must be between 0 and 255")
     if not args.image.exists():
@@ -567,6 +664,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         show_legend=not args.no_legend,
         title=title,
         bead_shape=args.bead_shape,
+        major_grid=args.major_grid,
+        super_grid=args.super_grid,
     )
     render_preview(matrix, used, preview_path, max(8, min(args.cell_size, 24)), args.bead_shape)
     write_matrix_csv(matrix, matrix_path)

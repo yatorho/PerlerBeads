@@ -15,6 +15,8 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 - Produces dense patterns by default: transparent pixels are composited onto a background color so every grid cell becomes a bead.
 - Supports custom CSV and JSON palettes.
 - Prints the palette code on each bead unit.
+- Adds row/column coordinate labels around the pattern sheet.
+- Draws heavier guide lines every 5 and 10 cells by default.
 - Renders bead units as circles or squares.
 - Exports a numbered pattern PNG, preview PNG, matrix CSV, material CSV, and material JSON.
 
@@ -125,6 +127,8 @@ python perler_pattern.py input.png --size 80x60 --empty-color 1 --empty-color "#
 - `--fit cover`: fill the target grid and crop edges when needed.
 - `--fit stretch`: stretch the source image to the target grid.
 - `--cell-size 24`: render each bead unit as 24 pixels in the output PNG. This controls output resolution, not bead count.
+- `--major-grid 5`: draw heavier guide lines and coordinate labels every 5 cells.
+- `--super-grid 10`: draw the heaviest guide lines every 10 cells.
 - `--bead-shape circle`: render pattern and preview bead units as circles.
 - `--bead-shape square`: render pattern and preview bead units as squares.
 - `--palette`: use a custom palette file.
@@ -143,8 +147,8 @@ python perler_pattern.py input.png --size 80x60 --empty-color 1 --empty-color "#
 The pattern PNG resolution is mainly controlled by `--size` and `--cell-size`:
 
 ```text
-pattern width  ~= grid columns * cell-size + margins + legend width
-pattern height ~= max(grid rows * cell-size, legend height) + title area + margins
+pattern width  ~= grid columns * cell-size + coordinate frame + margins + legend width
+pattern height ~= max(grid rows * cell-size + coordinate frame, legend height) + title area + margins
 ```
 
 For example, `--size 40x46 --cell-size 24` produces a higher-resolution image than `--size 40x46 --cell-size 16`, while keeping the same bead count. Use `--no-legend` to reduce the extra width added by the legend.

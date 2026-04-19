@@ -34,12 +34,12 @@ jobs:
           draw.ellipse((20, 20, 44, 44), fill=(255, 230, 80, 255))
           image.save("sample.png")
           PY
-          python perler_pattern.py sample.png --size 16x16 --cell-size 16 --output-dir output_ci
+          python perler_pattern.py sample.png --size 16x16 --cell-size 16 --output-dir examples/output_ci
 
       - name: Verify generated files
         run: |
-          test -s output_ci/sample_pattern.png
-          test -s output_ci/sample_preview.png
-          test -s output_ci/sample_matrix.csv
-          test -s output_ci/sample_materials.csv
-          test -s output_ci/sample_materials.json
+          test -s examples/output_ci/sample_pattern.png
+          test -s examples/output_ci/sample_preview.png
+          test -s examples/output_ci/sample_matrix.csv
+          test -s examples/output_ci/sample_materials.csv
+          test -s examples/output_ci/sample_materials.json

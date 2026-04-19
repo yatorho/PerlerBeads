@@ -26,7 +26,7 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 `-- README.md
 ```
 
-Generated files are written to `output/` by default and ignored by `.gitignore`.
+Generated files are written to `examples/output/` by default and ignored by `.gitignore`.
 
 ## Installation
 
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ## Quick Start
 
 ```bash
-python perler_pattern.py examples/kitty.png --size 50x60 --cell-size 28 --output-dir output
+python perler_pattern.py examples/kitty.png --size 50x60 --cell-size 28
 ```
 
 Generated outputs:
@@ -70,8 +70,7 @@ python perler_pattern.py input.jpg \
   --fit contain \
   --cell-size 24 \
   --bead-shape circle \
-  --background "#FFFFFF" \
-  --output-dir output
+  --background "#FFFFFF"
 ```
 
 Render square bead units:
@@ -118,7 +117,7 @@ The pattern PNG resolution is mainly controlled by `--size` and `--cell-size`:
 
 ```text
 pattern width  ~= grid columns * cell-size + margins + legend width
-pattern height ~= grid rows * cell-size + margins
+pattern height ~= max(grid rows * cell-size, legend height) + title area + margins
 ```
 
 For example, `--size 40x46 --cell-size 24` produces a higher-resolution image than `--size 40x46 --cell-size 16`, while keeping the same bead count. Use `--no-legend` to reduce the extra width added by the legend.

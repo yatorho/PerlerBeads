@@ -264,20 +264,30 @@ def render_pattern(
     legend_width = 0
     if show_legend:
         legend_width = max(270, cell_size * 7)
-    image_width = (cols * cell_size) + (margin * 2) + legend_width
-    image_height = (rows * cell_size) + (margin * 2)
-    output = Image.new("RGB", (image_width, image_height), "white")
-    draw = ImageDraw.Draw(output)
 
     code_font = load_font(max(8, min(cell_size - 4, int(cell_size * 0.42))), bold=True)
     title_font = load_font(max(16, int(cell_size * 0.55)), bold=True)
     legend_font = load_font(14)
     legend_bold = load_font(14, bold=True)
 
-    draw.text((margin, 8), title, fill=(20, 20, 20), font=title_font)
-    grid_top = margin
+    scratch = Image.new("RGB", (1, 1), "white")
+    scratch_draw = ImageDraw.Draw(scratch)
+    title_height = text_size(scratch_draw, title, title_font)[1]
+    title_area = title_height + max(14, cell_size // 2)
+    grid_top = margin + title_area
     grid_left = margin
+    grid_width = cols * cell_size
+    grid_height = rows * cell_size
+    legend_header_height = 28 if show_legend else 0
+    legend_row_height = 24
+    legend_height = legend_header_height + (len(counts) * legend_row_height)
+    image_width = grid_width + (margin * 2) + legend_width
+    image_height = max(grid_height, legend_height) + (margin * 2) + title_area
+    output = Image.new("RGB", (image_width, image_height), "white")
+    draw = ImageDraw.Draw(output)
     grid_color = (210, 210, 210)
+
+    draw.text((margin, margin // 2), title, fill=(20, 20, 20), font=title_font)
 
     for y, row in enumerate(matrix):
         for x, code in enumerate(row):
@@ -305,14 +315,14 @@ def render_pattern(
     if show_grid:
         for x in range(cols + 1):
             px = grid_left + x * cell_size
-            draw.line((px, grid_top, px, grid_top + rows * cell_size), fill=grid_color)
+            draw.line((px, grid_top, px, grid_top + grid_height), fill=grid_color)
         for y in range(rows + 1):
             py = grid_top + y * cell_size
-            draw.line((grid_left, py, grid_left + cols * cell_size, py), fill=grid_color)
+            draw.line((grid_left, py, grid_left + grid_width, py), fill=grid_color)
 
     if show_legend:
-        legend_left = grid_left + cols * cell_size + margin
-        y = margin
+        legend_left = grid_left + grid_width + margin
+        y = grid_top
         draw.text((legend_left, y), "Legend / Materials", fill=(20, 20, 20), font=legend_bold)
         y += 28
         for code, count in sorted(counts.items(), key=lambda item: natural_sort_key(item[0])):
@@ -407,7 +417,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Generate numbered Perler bead pattern sheets from images."
     )
     parser.add_argument("image", type=Path, help="Reference image path")
-    parser.add_argument("-o", "--output-dir", type=Path, default=Path("output"), help="Output directory")
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=Path,
+        default=Path("examples/output"),
+        help="Output directory",
+    )
     parser.add_argument(
         "-s",
         "--size",

@@ -20,6 +20,8 @@ env/
 # Local generated outputs
 output/
 output_*/
+examples/output/
+examples/output_*/
 *_pattern.png
 *_preview.png
 *_matrix.csv

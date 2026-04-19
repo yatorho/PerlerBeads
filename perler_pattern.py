@@ -114,6 +114,7 @@ def prepare_image(
     grid_size: tuple[int, int],
     fit: str,
     background: tuple[int, int, int],
+    allow_empty_transparent: bool,
 ) -> Image.Image:
     source = Image.open(image_path)
     source = ImageOps.exif_transpose(source).convert("RGBA")
@@ -124,7 +125,8 @@ def prepare_image(
     elif fit == "cover":
         fitted = ImageOps.fit(source, grid_size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
     else:
-        canvas = Image.new("RGBA", grid_size, (*background, 255))
+        fill_alpha = 0 if allow_empty_transparent else 255
+        canvas = Image.new("RGBA", grid_size, (*background, fill_alpha))
         contained = ImageOps.contain(source, grid_size, method=Image.Resampling.LANCZOS)
         offset = ((target_width - contained.width) // 2, (target_height - contained.height) // 2)
         canvas.alpha_composite(contained, offset)
@@ -486,7 +488,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         image_size = original.size
     grid_size = resolve_grid_size(args.size, image_size)
     palette = load_palette(args.palette, args.max_colors)
-    prepared = prepare_image(args.image, grid_size, args.fit, background)
+    prepared = prepare_image(args.image, grid_size, args.fit, background, args.allow_empty_transparent)
     matrix, used, counts = quantize_to_palette(
         prepared,
         palette,

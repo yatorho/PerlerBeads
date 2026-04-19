@@ -109,7 +109,7 @@ python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.
 - `--size 80x60`: create an 80-column by 60-row bead grid.
 - `--size 80x`: set width only and calculate height from the source image aspect ratio.
 - `--size x60`: set height only and calculate width from the source image aspect ratio.
-- `--fit contain`: keep the full source image and fill extra space with `--background`.
+- `--fit contain`: keep the full source image. Extra space uses `--background` by default, or empty cells with `--allow-empty-transparent`.
 - `--fit cover`: fill the target grid and crop edges when needed.
 - `--fit stretch`: stretch the source image to the target grid.
 - `--cell-size 24`: render each bead unit as 24 pixels in the output PNG. This controls output resolution, not bead count.
@@ -117,8 +117,8 @@ python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.
 - `--bead-shape square`: render pattern and preview bead units as squares.
 - `--palette`: use a custom palette file.
 - `--max-colors`: use only the first N colors from the palette.
-- `--background`: composite transparent pixels and `contain` padding onto this color before palette matching.
-- `--allow-empty-transparent`: let transparent pixels become empty cells. By default, patterns are dense and every cell is a bead.
+- `--background`: composite transparent pixels and `contain` padding onto this color before palette matching, unless `--allow-empty-transparent` is set.
+- `--allow-empty-transparent`: let transparent pixels become empty cells, including transparent padding created by `--fit contain`. By default, patterns are dense and every cell is a bead.
 - `--transparent-alpha`: alpha threshold used with `--allow-empty-transparent`.
 - `--no-grid`: hide grid lines on the pattern sheet.
 - `--no-legend`: hide the material legend on the pattern sheet.

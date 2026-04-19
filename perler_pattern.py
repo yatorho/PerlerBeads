@@ -153,6 +153,32 @@ def nearest_palette_color(
     return min(palette, key=lambda color: color_distance(rgb, color.rgb))
 
 
+def resolve_empty_color_codes(
+    values: list[str],
+    palette: list[PaletteColor],
+    background: tuple[int, int, int],
+    empty_background: bool,
+) -> set[str]:
+    palette_by_code = {color.code: color for color in palette}
+    empty_codes: set[str] = set()
+    if empty_background:
+        empty_codes.add(nearest_palette_color(background, palette).code)
+
+    for value in values:
+        text = value.strip()
+        if text in palette_by_code:
+            empty_codes.add(text)
+            continue
+        try:
+            rgb = parse_hex_color(text)
+        except ValueError as exc:
+            raise ValueError(
+                f"Empty color {value!r} is not a palette code or hex color"
+            ) from exc
+        empty_codes.add(nearest_palette_color(rgb, palette).code)
+    return empty_codes
+
+
 def pixel_to_rgb(pixel: tuple[int, ...], background: tuple[int, int, int]) -> tuple[int, int, int]:
     red, green, blue, alpha = pixel
     if alpha >= 255:
@@ -171,6 +197,7 @@ def quantize_to_palette(
     background: tuple[int, int, int],
     transparent_alpha: int,
     allow_empty_transparent: bool,
+    empty_codes: set[str],
 ) -> tuple[list[list[str]], dict[str, PaletteColor], Counter[str]]:
     width, height = image.size
     pixels = image.load()
@@ -187,6 +214,9 @@ def quantize_to_palette(
                 continue
             rgb = pixel_to_rgb(pixel, background)
             color = nearest_palette_color(rgb, palette)
+            if color.code in empty_codes:
+                row.append(TRANSPARENT_CODE)
+                continue
             row.append(color.code)
             counts[color.code] += 1
             used[color.code] = color
@@ -466,6 +496,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Let pixels below --transparent-alpha become empty cells instead of background-filled beads",
     )
+    parser.add_argument(
+        "--empty-background",
+        action="store_true",
+        help="Treat the palette color nearest to --background as empty cells",
+    )
+    parser.add_argument(
+        "--empty-color",
+        action="append",
+        default=[],
+        help="Palette code or hex color to treat as empty cells. Can be repeated",
+    )
     parser.add_argument("--no-grid", action="store_true", help="Hide square grid lines on the pattern")
     parser.add_argument("--no-legend", action="store_true", help="Hide legend on the pattern PNG")
     parser.add_argument("--title", default=None, help="Pattern title printed on the sheet")
@@ -488,6 +529,15 @@ def main(argv: Iterable[str] | None = None) -> int:
         image_size = original.size
     grid_size = resolve_grid_size(args.size, image_size)
     palette = load_palette(args.palette, args.max_colors)
+    try:
+        empty_codes = resolve_empty_color_codes(
+            args.empty_color,
+            palette,
+            background,
+            args.empty_background,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     prepared = prepare_image(args.image, grid_size, args.fit, background, args.allow_empty_transparent)
     matrix, used, counts = quantize_to_palette(
         prepared,
@@ -495,6 +545,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         background,
         args.transparent_alpha,
         args.allow_empty_transparent,
+        empty_codes,
     )
 
     stem = args.image.stem

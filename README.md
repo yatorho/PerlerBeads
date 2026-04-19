@@ -104,6 +104,18 @@ Use a different built-in palette:
 python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.csv
 ```
 
+Skip beads for the background color:
+
+```bash
+python perler_pattern.py input.png --size 80x60 --background "#FFFFFF" --empty-background
+```
+
+Skip beads for specific palette codes or HEX colors:
+
+```bash
+python perler_pattern.py input.png --size 80x60 --empty-color 1 --empty-color "#FFFFFF"
+```
+
 ## Key Options
 
 - `--size 80x60`: create an 80-column by 60-row bead grid.
@@ -120,6 +132,8 @@ python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.
 - `--background`: composite transparent pixels and `contain` padding onto this color before palette matching, unless `--allow-empty-transparent` is set.
 - `--allow-empty-transparent`: let transparent pixels become empty cells, including transparent padding created by `--fit contain`. By default, patterns are dense and every cell is a bead.
 - `--transparent-alpha`: alpha threshold used with `--allow-empty-transparent`.
+- `--empty-background`: treat the palette color nearest to `--background` as empty cells after palette matching.
+- `--empty-color`: treat a palette code or HEX color as empty cells after palette matching. Can be repeated.
 - `--no-grid`: hide grid lines on the pattern sheet.
 - `--no-legend`: hide the material legend on the pattern sheet.
 - `--title`: set a custom pattern title.
@@ -134,6 +148,15 @@ pattern height ~= max(grid rows * cell-size, legend height) + title area + margi
 ```
 
 For example, `--size 40x46 --cell-size 24` produces a higher-resolution image than `--size 40x46 --cell-size 16`, while keeping the same bead count. Use `--no-legend` to reduce the extra width added by the legend.
+
+## Empty Cells
+
+There are two ways to create cells that do not require beads:
+
+- Use `--allow-empty-transparent` when the source image has real transparency and you want transparent pixels to stay empty.
+- Use `--empty-background` or `--empty-color` when the source image has a visible background color, such as white, that should not be counted as beads.
+
+For transparent PNG/WebP artwork, `--allow-empty-transparent` is usually the cleanest option. For JPGs, screenshots, scans, or images with solid backgrounds, color-based empty cells are usually more predictable.
 
 ## Custom Palette
 

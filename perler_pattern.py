@@ -42,7 +42,7 @@ def rgb_to_hex(rgb: tuple[int, int, int]) -> str:
     return "#{:02X}{:02X}{:02X}".format(*rgb)
 
 
-def load_palette(path: Path, limit: int | None = None) -> list[PaletteColor]:
+def load_palette(path: Path) -> list[PaletteColor]:
     if not path.exists():
         raise FileNotFoundError(f"Palette file not found: {path}")
 
@@ -74,10 +74,6 @@ def load_palette(path: Path, limit: int | None = None) -> list[PaletteColor]:
 
     if not palette:
         raise ValueError(f"Palette is empty: {path}")
-    if limit is not None:
-        if limit <= 0:
-            raise ValueError("--max-colors must be greater than zero")
-        palette = palette[:limit]
     return palette
 
 
@@ -153,6 +149,14 @@ def nearest_palette_color(
     return min(palette, key=lambda color: color_distance(rgb, color.rgb))
 
 
+def limit_palette(palette: list[PaletteColor], limit: int | None) -> list[PaletteColor]:
+    if limit is None:
+        return palette
+    if limit <= 0:
+        raise ValueError("--max-colors must be greater than zero")
+    return palette[:limit]
+
+
 def resolve_empty_color_codes(
     values: list[str],
     palette: list[PaletteColor],
@@ -194,6 +198,7 @@ def pixel_to_rgb(pixel: tuple[int, ...], background: tuple[int, int, int]) -> tu
 def quantize_to_palette(
     image: Image.Image,
     palette: list[PaletteColor],
+    empty_match_palette: list[PaletteColor],
     background: tuple[int, int, int],
     transparent_alpha: int,
     allow_empty_transparent: bool,
@@ -213,10 +218,11 @@ def quantize_to_palette(
                 row.append(TRANSPARENT_CODE)
                 continue
             rgb = pixel_to_rgb(pixel, background)
-            color = nearest_palette_color(rgb, palette)
-            if color.code in empty_codes:
+            empty_match = nearest_palette_color(rgb, empty_match_palette)
+            if empty_match.code in empty_codes:
                 row.append(TRANSPARENT_CODE)
                 continue
+            color = nearest_palette_color(rgb, palette)
             row.append(color.code)
             counts[color.code] += 1
             used[color.code] = color
@@ -225,12 +231,54 @@ def quantize_to_palette(
     return matrix, used, counts
 
 
+def select_best_palette(
+    image: Image.Image,
+    palette: list[PaletteColor],
+    background: tuple[int, int, int],
+    transparent_alpha: int,
+    allow_empty_transparent: bool,
+    empty_codes: set[str],
+    limit: int | None,
+) -> list[PaletteColor]:
+    if limit is None:
+        return palette
+    if limit <= 0:
+        raise ValueError("--best-colors must be greater than zero")
+    if limit >= len(palette):
+        return palette
+
+    width, height = image.size
+    pixels = image.load()
+    counts: Counter[str] = Counter()
+    by_code = {color.code: color for color in palette}
+    for y in range(height):
+        for x in range(width):
+            pixel = pixels[x, y]
+            if allow_empty_transparent and len(pixel) == 4 and pixel[3] < transparent_alpha:
+                continue
+            rgb = pixel_to_rgb(pixel, background)
+            color = nearest_palette_color(rgb, palette)
+            if color.code in empty_codes:
+                continue
+            counts[color.code] += 1
+
+    if not counts:
+        return palette[:limit]
+    selected_codes = [code for code, _ in counts.most_common(limit)]
+    return [by_code[code] for code in selected_codes]
+
+
 def contrasting_text_color(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
     luminance = (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2])
     return (0, 0, 0) if luminance > 150 else (255, 255, 255)
 
 
-def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+def load_font(size: int, bold: bool = False, font_path: Path | None = None) -> ImageFont.ImageFont:
+    if font_path is not None:
+        try:
+            return ImageFont.truetype(str(font_path), size)
+        except OSError:
+            pass
     candidates = [
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
@@ -298,18 +346,19 @@ def render_pattern(
     bead_shape: str,
     major_grid: int,
     super_grid: int,
+    legend_font_size: int,
+    legend_font_path: Path | None,
 ) -> None:
     rows = len(matrix)
     cols = len(matrix[0])
     margin = max(18, cell_size)
-    legend_width = 0
-    if show_legend:
-        legend_width = max(270, cell_size * 7)
 
-    code_font = load_font(max(8, min(cell_size - 4, int(cell_size * 0.42))), bold=True)
+    max_code_len = max((len(code) for code in used), default=1)
+    code_scale = 0.46 if max_code_len <= 2 else 0.34 if max_code_len <= 4 else 0.28
+    code_font = load_font(max(6, min(cell_size - 4, int(cell_size * code_scale))), bold=True)
     title_font = load_font(max(16, int(cell_size * 0.55)), bold=True)
-    legend_font = load_font(14)
-    legend_bold = load_font(14, bold=True)
+    legend_font = load_font(legend_font_size, font_path=legend_font_path)
+    legend_bold = load_font(legend_font_size, bold=True, font_path=legend_font_path)
     coord_font = load_font(max(9, min(16, int(cell_size * 0.5))), bold=True)
 
     scratch = Image.new("RGB", (1, 1), "white")
@@ -327,9 +376,21 @@ def render_pattern(
     grid_top = frame_top + coord_band
     frame_width = grid_width + (coord_band * 2)
     frame_height = grid_height + (coord_band * 2)
-    legend_header_height = 28 if show_legend else 0
-    legend_row_height = 24
-    legend_height = legend_header_height + (len(counts) * legend_row_height)
+    legend_swatch_size = max(18, legend_font_size + 4)
+    legend_row_height = max(24, legend_swatch_size + 6)
+    legend_title = "Legend / Materials"
+    legend_labels = []
+    for code, count in sorted(counts.items(), key=lambda item: natural_sort_key(item[0])):
+        color = used[code]
+        legend_labels.append((color, f"{code}  {color.name}  {color.hex}  x{count}"))
+    legend_header_height = legend_row_height + 4 if show_legend else 0
+    legend_height = legend_header_height + (len(legend_labels) * legend_row_height)
+    legend_width = 0
+    if show_legend:
+        legend_text_width = text_size(scratch_draw, legend_title, legend_bold)[0]
+        for _, label in legend_labels:
+            legend_text_width = max(legend_text_width, text_size(scratch_draw, label, legend_font)[0] + legend_swatch_size + 12)
+        legend_width = max(270, cell_size * 7, legend_text_width + 12)
     image_width = frame_width + (margin * 2) + legend_width
     image_height = max(frame_height, legend_height) + (margin * 2) + title_area
     output = Image.new("RGB", (image_width, image_height), "white")
@@ -446,14 +507,17 @@ def render_pattern(
     if show_legend:
         legend_left = frame_left + frame_width + margin
         y = grid_top
-        draw.text((legend_left, y), "Legend / Materials", fill=(20, 20, 20), font=legend_bold)
-        y += 28
-        for code, count in sorted(counts.items(), key=lambda item: natural_sort_key(item[0])):
-            color = used[code]
-            draw.rectangle((legend_left, y, legend_left + 18, y + 18), fill=color.rgb, outline=(80, 80, 80))
-            label = f"{code}  {color.name}  {color.hex}  x{count}"
-            draw.text((legend_left + 28, y), label, fill=(30, 30, 30), font=legend_font)
-            y += 24
+        draw.text((legend_left, y), legend_title, fill=(20, 20, 20), font=legend_bold)
+        y += legend_header_height
+        for color, label in legend_labels:
+            swatch_top = y + max(0, (legend_row_height - legend_swatch_size) // 2)
+            draw.rectangle(
+                (legend_left, swatch_top, legend_left + legend_swatch_size, swatch_top + legend_swatch_size),
+                fill=color.rgb,
+                outline=(80, 80, 80),
+            )
+            draw.text((legend_left + legend_swatch_size + 10, y), label, fill=(30, 30, 30), font=legend_font)
+            y += legend_row_height
 
     output.save(output_path)
 
@@ -561,7 +625,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_PALETTE,
         help="CSV or JSON palette. CSV columns: code,name,hex or code,name,r,g,b",
     )
-    parser.add_argument("--max-colors", type=int, default=None, help="Use only the first N palette colors")
+    parser.add_argument("--max-colors", type=int, default=None, help="Use only the first N palette colors before matching")
+    parser.add_argument(
+        "--best-colors",
+        type=int,
+        default=None,
+        help="Analyze the image and use only the N most frequently matched palette colors",
+    )
     parser.add_argument("--cell-size", type=int, default=28, help="Pattern cell size in pixels")
     parser.add_argument("--major-grid", type=int, default=5, help="Draw heavier grid lines and coordinate labels every N cells")
     parser.add_argument("--super-grid", type=int, default=10, help="Draw the heaviest grid lines every N cells")
@@ -571,6 +641,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default="circle",
         help="Rendered bead unit shape",
     )
+    parser.add_argument("--legend-font-size", type=int, default=14, help="Legend font size in pixels")
+    parser.add_argument("--legend-font", type=Path, default=None, help="Path to a TrueType/OpenType font file for the legend")
     parser.add_argument(
         "--fit",
         choices=["contain", "cover", "stretch"],
@@ -612,6 +684,10 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if args.cell_size < 12:
         parser.error("--cell-size must be at least 12 so color codes remain readable")
+    if args.legend_font_size < 8:
+        parser.error("--legend-font-size must be at least 8")
+    if args.legend_font is not None and not args.legend_font.exists():
+        parser.error(f"--legend-font does not exist: {args.legend_font}")
     if args.major_grid < 0:
         parser.error("--major-grid must be zero or greater")
     if args.super_grid < 0:
@@ -625,7 +701,11 @@ def main(argv: Iterable[str] | None = None) -> int:
     with Image.open(args.image) as original:
         image_size = original.size
     grid_size = resolve_grid_size(args.size, image_size)
-    palette = load_palette(args.palette, args.max_colors)
+    source_palette = load_palette(args.palette)
+    try:
+        palette = limit_palette(source_palette, args.max_colors)
+    except ValueError as exc:
+        parser.error(str(exc))
     try:
         empty_codes = resolve_empty_color_codes(
             args.empty_color,
@@ -636,9 +716,23 @@ def main(argv: Iterable[str] | None = None) -> int:
     except ValueError as exc:
         parser.error(str(exc))
     prepared = prepare_image(args.image, grid_size, args.fit, background, args.allow_empty_transparent)
+    empty_match_palette = palette
+    try:
+        palette = select_best_palette(
+            prepared,
+            palette,
+            background,
+            args.transparent_alpha,
+            args.allow_empty_transparent,
+            empty_codes,
+            args.best_colors,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     matrix, used, counts = quantize_to_palette(
         prepared,
         palette,
+        empty_match_palette,
         background,
         args.transparent_alpha,
         args.allow_empty_transparent,
@@ -666,6 +760,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         bead_shape=args.bead_shape,
         major_grid=args.major_grid,
         super_grid=args.super_grid,
+        legend_font_size=args.legend_font_size,
+        legend_font_path=args.legend_font,
     )
     render_preview(matrix, used, preview_path, max(8, min(args.cell_size, 24)), args.bead_shape)
     write_matrix_csv(matrix, matrix_path)

@@ -32,6 +32,7 @@ Generate numbered Perler Beads pattern sheets from reference images. The tool re
 |-- requirements.txt               # pip dependency list
 |-- .github/workflows/ci.yml       # GitHub Actions smoke test
 |-- LICENSE                        # MIT License
+|-- THIRD_PARTY_NOTICES.md         # Data attribution notices
 `-- README.md
 ```
 
@@ -100,10 +101,22 @@ Use only the first 12 colors from the palette:
 python perler_pattern.py input.png --size 80x60 --max-colors 12
 ```
 
+Analyze the image and use only the 24 most relevant colors from a full palette:
+
+```bash
+python perler_pattern.py input.png --size 80x60 --palette palettes/perler_full.csv --best-colors 24
+```
+
 Use a different built-in palette:
 
 ```bash
 python perler_pattern.py input.png --size 80x60 --palette palettes/pixel_art_16.csv
+```
+
+Adjust the material legend font:
+
+```bash
+python perler_pattern.py input.png --size 80x60 --legend-font-size 18 --legend-font /path/to/font.ttf
 ```
 
 Skip beads for the background color:
@@ -131,8 +144,12 @@ python perler_pattern.py input.png --size 80x60 --empty-color 1 --empty-color "#
 - `--super-grid 10`: draw the heaviest guide lines every 10 cells.
 - `--bead-shape circle`: render pattern and preview bead units as circles.
 - `--bead-shape square`: render pattern and preview bead units as squares.
+- `--legend-font-size 14`: set the material legend font size.
+- `--legend-font`: use a TrueType/OpenType font file for the material legend.
 - `--palette`: use a custom palette file.
-- `--max-colors`: use only the first N colors from the palette.
+- `--max-colors`: use only the first N colors from the palette before matching.
+- `--best-colors`: analyze the image and use only the N most frequently matched palette colors.
+- If both are set, `--max-colors` narrows the palette first, then `--best-colors` selects from that subset.
 - `--background`: composite transparent pixels and `contain` padding onto this color before palette matching, unless `--allow-empty-transparent` is set.
 - `--allow-empty-transparent`: let transparent pixels become empty cells, including transparent padding created by `--fit contain`. By default, patterns are dense and every cell is a bead.
 - `--transparent-alpha`: alpha threshold used with `--allow-empty-transparent`.
@@ -167,6 +184,7 @@ For transparent PNG/WebP artwork, `--allow-empty-transparent` is usually the cle
 Built-in palettes:
 
 - `palettes/starter_perler.csv`: broad starter palette for general use.
+- `palettes/perler_full.csv`: 103-color Perler palette derived from the MIT-licensed `maxcleme/beadcolors` data. It uses short `P001`-style chart codes and keeps the original Perler reference code in the color name and `source_code` column.
 - `palettes/classic_bright.csv`: saturated high-contrast colors.
 - `palettes/soft_pastel.csv`: lighter pastel colors for gentle illustrations.
 - `palettes/pixel_art_16.csv`: compact 16-color palette for retro pixel-art patterns.
@@ -207,5 +225,8 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Notes
 
-- The included palettes are practical starter palettes, not official complete color charts from any manufacturer.
+- Perler sells many bead colors on its official shop-by-color page, but does not publish this repository's `code,name,hex` CSV format as a single official standard.
+- Hama publishes official color charts, but color availability differs by bead size.
+- `palettes/perler_full.csv` is derived from community-maintained `beadcolors` RGB data. See `THIRD_PARTY_NOTICES.md`.
+- The smaller palettes are practical starter palettes, not official complete color charts from any manufacturer.
 - `examples/kitty.png` is included as an example input image for quick CLI testing.
